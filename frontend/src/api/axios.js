@@ -7,7 +7,11 @@ import { translateError } from "../utils/translateError";
  * withCredentials: true — браузърът праща сесийната бисквитка към бекенда на другия адрес.
  * Бекендът трябва да има cors({ credentials: true }) и този адрес в CLIENT_URL.
  */
-export const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:5555").replace(/\/$/, "");
+export const API_URL = (
+  "https://ecommerce-1-api.onrender.com" ||
+  // process.env.REACT_APP_API_URL ||
+  "http://localhost:5555"
+).replace(/\/$/, "");
 
 const api = axios.create({
   baseURL: API_URL,
@@ -26,13 +30,13 @@ api.interceptors.response.use(
       message = "Няма връзка със сървъра. Проверете интернет връзката си.";
     } else {
       message = translateError(
-        error.response.data?.errMessage || error.response.data?.message
+        error.response.data?.errMessage || error.response.data?.message,
       );
     }
     error.userMessage = message;
     error.status = error.response?.status;
     return Promise.reject(error);
-  }
+  },
 );
 
 export const getApiErrorMessage = (error) =>
