@@ -129,6 +129,7 @@ const createRandomProducts = catchAsyncErrors(async (req, res, next) => {
   }
 });
 
-router.post("/admin/random/products", createRandomProducts);
+const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
+router.post("/admin/random/products", isAuthenticated, isAdmin, createRandomProducts);
 
 module.exports = router;

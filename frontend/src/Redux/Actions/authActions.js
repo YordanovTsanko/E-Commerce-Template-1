@@ -1,4 +1,4 @@
-import axios from "axios";
+import api, { getApiErrorMessage } from "../../api/axios";
 import { toast } from "react-toastify";
 import {
   LOGIN_REQUEST,
@@ -21,158 +21,103 @@ import {
   PROFILE_UPDATE_FAIL,
   CLEAR_ERRORS,
 } from "../Constants/authConstants";
+import { GET_CART_SUCCESS } from "../Constants/cartConstants";
 
+// Бекендът връща целия документ (включително хеша на паролата) — не го пазим в стейта.
+const sanitizeUser = (user) => {
+  if (!user) return null;
+  const { password, ...safe } = user;
+  return safe;
+};
+
+/** Връща потребителя при успех или null при грешка. */
 export const login = (email, password) => async (dispatch) => {
+  dispatch({ type: LOGIN_REQUEST });
   try {
-    dispatch({ type: LOGIN_REQUEST });
-
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    const { data } = await axios.post(
-      `/api/v1/login`,
-      { email, password },
-      config
-    );
-
-    dispatch({
-      type: LOGIN_SUCCESS,
-      payload: data.user,
+    const { data } = await api.post("/api/v1/login", {
+      email: email.trim().toLowerCase(),
+      password,
     });
+    const user = sanitizeUser(data.user);
+    dispatch({ type: LOGIN_SUCCESS, payload: user });
+    return user;
   } catch (error) {
-    console.log(error);
-    dispatch({
-      type: LOGIN_FAIL,
-      payload: error.response.data.errMessage,
-    });
+    dispatch({ type: LOGIN_FAIL, payload: getApiErrorMessage(error) });
+    return null;
   }
 };
 
 export const register = (userData) => async (dispatch) => {
+  dispatch({ type: REGISTER_REQUEST });
   try {
-    dispatch({ type: REGISTER_REQUEST });
-
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-
-    const { data } = await axios.post("/api/v1/register", userData, config);
-
+    const { data } = await api.post("/api/v1/register", userData);
     dispatch({
       type: REGISTER_SUCCESS,
-      payload: data.message,
+      payload: "Регистрацията е успешна. Вече можете да влезете в профила си.",
     });
-    return data
+    return data;
   } catch (error) {
-    dispatch({
-      type: REGISTER_FAIL,
-      payload: error.response.data.errMessage || "Error",
-    });
+    dispatch({ type: REGISTER_FAIL, payload: getApiErrorMessage(error) });
+    return null;
   }
 };
 
+/** Проверява дали има активна сесия. 401 е нормален отговор за гост — не е грешка. */
 export const loadUser = () => async (dispatch) => {
+  dispatch({ type: LOAD_USER_REQUEST });
   try {
-    dispatch({ type: LOAD_USER_REQUEST });
-
-    const { data } = await axios.get("/api/v1/isloggedin");
-
-    dispatch({
-      type: LOAD_USER_SUCCESS,
-      payload: data.user,
-    });
+    const { data } = await api.get("/api/v1/isloggedin");
+    dispatch({ type: LOAD_USER_SUCCESS, payload: sanitizeUser(data.user) });
   } catch (error) {
-    dispatch({
-      type: LOAD_USER_FAIL,
-      payload: error.response.data.errMessage,
-    });
+    dispatch({ type: LOAD_USER_FAIL });
   }
 };
 
 export const logout = () => async (dispatch) => {
+  dispatch({ type: LOGOUT_REQUEST });
   try {
-    dispatch({ type: LOGOUT_REQUEST });
-
-    await axios.post("/api/v1/logout");
-
+    await api.post("/api/v1/logout");
     dispatch({ type: LOGOUT_SUCCESS });
+    dispatch({ type: GET_CART_SUCCESS, payload: [] });
+    return true;
   } catch (error) {
-    dispatch({
-      type: LOGOUT_FAIL,
-      payload: error.response.data.errMessage,
-    });
+    dispatch({ type: LOGOUT_FAIL, payload: getApiErrorMessage(error) });
+    return false;
   }
 };
 
-//profile
 export const updateProfile = (userData) => async (dispatch) => {
+  dispatch({ type: PROFILE_UPDATE_REQUEST });
   try {
-    dispatch({ type: PROFILE_UPDATE_REQUEST });
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    const fixedData = (({ id, ...rest }) => rest)(userData);
-  console.log(fixedData)
-    const { data } = await axios.put(
-      `/api/v1/user/edit/${userData.id}`,
-      fixedData,
-      config
-    );
+    const { id, ...payload } = userData;
+    const { data } = await api.put(`/api/v1/user/edit/${id}`, payload);
     dispatch({ type: PROFILE_UPDATE_SUCCESS, payload: data.success });
-    toast.success("Profile Updated", {
-      autoClose: 500,
-      theme: "colored",
-    });
+    toast.success("Данните са запазени.");
+    dispatch(loadUser());
+    return true;
   } catch (error) {
-    console.log(error);
-    toast.error(error.response.data.errMessage, {
-      autoClose: 500,
-      theme: "colored",
-    });
-    dispatch({
-      type: PROFILE_UPDATE_FAIL,
-      payload: error.response.data.errMessage,
-    });
+    const message = getApiErrorMessage(error);
+    toast.error(message);
+    dispatch({ type: PROFILE_UPDATE_FAIL, payload: message });
+    return false;
   }
 };
 
-export const updatePassword = (userData, password) => async (dispatch) => {
+export const updatePassword = (userId, passwords) => async (dispatch) => {
+  dispatch({ type: PASSWORD_UPDATE_REQUEST });
   try {
-    dispatch({ type: PASSWORD_UPDATE_REQUEST });
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    const response = await axios.put(
-      `/api/v1/user/edit/${userData.id}`,
-      password,
-      config
-    );
-    dispatch({ type: PASSWORD_UPDATE_SUCCESS, payload: response.data.success });
-    toast.success(response.data.message, {
-      autoClose: 500,
-      theme: "colored",
-    });
+    const { data } = await api.put(`/api/v1/user/edit/${userId}`, passwords);
+    dispatch({ type: PASSWORD_UPDATE_SUCCESS, payload: data.success });
+    toast.success("Паролата е сменена.");
+    return true;
   } catch (error) {
-    toast.error(error.response.data.errMessage, {
-      autoClose: 500,
-      theme: "colored",
-    });
-    dispatch({
-      type: PASSWORD_UPDATE_FAIL,
-      payload: error.response.data.errMessage,
-    });
+    const message = getApiErrorMessage(error);
+    toast.error(message);
+    dispatch({ type: PASSWORD_UPDATE_FAIL, payload: message });
+    return false;
   }
 };
 
-// Clear Errors
 export const clearErrors = () => (dispatch) => {
   dispatch({ type: CLEAR_ERRORS });
 };

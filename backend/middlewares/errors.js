@@ -1,25 +1,37 @@
 const ErrorHandler = require("../utils/errorHandler");
 
 module.exports = (err, req, res, next) => {
-  err.statusCode = err.statusCode || 500;
-  
-  if (process.env.NODE_ENV === "DEVELOPMENT") {
-    // Log the full error object
-    res.status(err.statusCode).json({
-      success: false,
-      error: err,
-      errMessage: err.message,
-      stack: err.stack,
-    });
+  let statusCode = err.statusCode || 500;
+  let message = err.message || "Internal Server Error";
+
+  // Невалидно Mongo ID (напр. /order/abc)
+  if (err.name === "CastError") {
+    statusCode = 400;
+    message = `Invalid ${err.path}`;
   }
 
-  if (process.env.NODE_ENV === "PRODUCTION") {
-    let error = { ...err };
-    error.message = err.message;
-
-    res.status(error.statusCode).json({
-      success: false,
-      errMessage: error.message || "Internal Server Error",
-    });
+  // Грешки от валидацията на Mongoose
+  if (err.name === "ValidationError") {
+    statusCode = 400;
+    message = Object.values(err.errors)
+      .map((value) => value.message)
+      .join(" ");
   }
+
+  // Дублиран уникален ключ (напр. имейл)
+  if (err.code === 11000) {
+    statusCode = 400;
+    message = "Email already exists";
+  }
+
+  // CORS отказ
+  if (message.startsWith("CORS:")) statusCode = 403;
+
+  if (Array.isArray(message)) message = message.join(" ");
+
+  const body = { success: false, errMessage: message };
+  if (process.env.NODE_ENV === "DEVELOPMENT") body.stack = err.stack;
+
+  // Винаги връщаме отговор — преди при друг NODE_ENV заявката "висеше".
+  res.status(statusCode).json(body);
 };

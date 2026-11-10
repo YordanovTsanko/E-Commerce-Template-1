@@ -7,16 +7,18 @@ const {
   getAdminAllProdcuts,
   getAdminSingleProductDetails,
   deleteProduct,
-  searchProduct
+  searchProduct,
 } = require("../controllers/productsController");
+const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
 
 router.route("/products/:category").get(getAllProdcutsByCat);
 router.route("/products/:category/:id").get(getSingleProductByID);
 router.route("/product/search/:field").get(searchProduct);
+
 // admin routes
-router.route("/admin/product/new").post(addNewProduct);
-router.route("/admin/products").get(getAdminAllProdcuts);
-router.route("/admin/product/:id").get(getAdminSingleProductDetails);
-router.route("/admin/product/delete/:id").delete(deleteProduct);
+router.route("/admin/product/new").post(isAuthenticated, isAdmin, addNewProduct);
+router.route("/admin/products").get(isAuthenticated, isAdmin, getAdminAllProdcuts);
+router.route("/admin/product/:id").get(isAuthenticated, isAdmin, getAdminSingleProductDetails);
+router.route("/admin/product/delete/:id").delete(isAuthenticated, isAdmin, deleteProduct);
 
 module.exports = router;

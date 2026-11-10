@@ -1,4 +1,4 @@
-import axios from "axios";
+import api, { getApiErrorMessage } from "../../api/axios";
 import { toast } from "react-toastify";
 import {
   CREATE_REVIEW_REQUEST,
@@ -16,99 +16,57 @@ import {
   DELETE_REVIEW_FAIL,
 } from "../Constants/reviewsConstants";
 
-export const createReview = (reviewData) => async (dispatch) => {
-  // { rating, comment, productId } = req.body/reviewData
-  try {
-    dispatch({ type: CREATE_REVIEW_REQUEST });
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    const { data } = await axios.post(`/api/v1/review/new`, reviewData, config);
+const fail = (dispatch, type, error) => {
+  const message = getApiErrorMessage(error);
+  dispatch({ type, payload: message });
+  toast.error(message);
+  return false;
+};
 
-    dispatch({
-      type: CREATE_REVIEW_SUCCESS,
-      payload: data.review,
-    });
+export const createReview = (reviewData) => async (dispatch) => {
+  dispatch({ type: CREATE_REVIEW_REQUEST });
+  try {
+    const { data } = await api.post("/api/v1/review/new", reviewData);
+    dispatch({ type: CREATE_REVIEW_SUCCESS, payload: data.review });
+    toast.success("Благодарим! Ревюто ви е публикувано.");
+    return true;
   } catch (error) {
-    console.log(error);
-    dispatch({
-      type: CREATE_REVIEW_FAIL,
-      payload:
-        error.response.data.errMessage ||
-        "Something went wrong while creating the review.",
-    });
+    return fail(dispatch, CREATE_REVIEW_FAIL, error);
   }
 };
 
 export const getProductReviews = (productId) => async (dispatch) => {
+  dispatch({ type: GET_PRODUCT_REVIEWS_REQUEST });
   try {
-    dispatch({ type: GET_PRODUCT_REVIEWS_REQUEST });
-
-    const { data } = await axios.get(`/api/v1/review/${productId}`);
-
-    dispatch({
-      type: GET_PRODUCT_REVIEWS_SUCCESS,
-      payload: data.reviews,
-    });
+    const { data } = await api.get(`/api/v1/review/${productId}`);
+    dispatch({ type: GET_PRODUCT_REVIEWS_SUCCESS, payload: data.reviews || [] });
   } catch (error) {
-    dispatch({
-      type: GET_PRODUCT_REVIEWS_FAIL,
-      payload:
-        error.response.data.errMessage || "Failed to fetch product reviews.",
-    });
+    dispatch({ type: GET_PRODUCT_REVIEWS_FAIL, payload: getApiErrorMessage(error) });
   }
 };
+
 export const editReview = (newData, reviewId) => async (dispatch) => {
+  dispatch({ type: EDIT_REVIEW_REQUEST });
   try {
-    dispatch({ type: EDIT_REVIEW_REQUEST });
-    const config = {
-      headers: {
-        "Content-Type": "application/json",
-      },
-    };
-    const { data } = await axios.put(
-      `/api/v1/review/edit/${reviewId}`,
-      newData,
-      config
-    );
-    dispatch({
-      type: EDIT_REVIEW_SUCCESS,
-      payload: data.review,
-    });
+    const { data } = await api.put(`/api/v1/review/edit/${reviewId}`, newData);
+    dispatch({ type: EDIT_REVIEW_SUCCESS, payload: data.review });
+    toast.success("Ревюто е обновено.");
+    return true;
   } catch (error) {
-    console.log(error);
-    dispatch({
-      type: EDIT_REVIEW_FAIL,
-      payload: error.response.data.errMessage || "Failed to edit the review!",
-    });
-  }
-};
-export const deleteReviews = (productId) => async (dispatch) => {
-  try {
-    dispatch({ type: DELETE_REVIEW_REQUEST });
-
-    const { data } = await axios.delete(`/api/v1/review/delete/${productId}`);
-   console.log(data.review._id)
-    dispatch({
-      type: DELETE_REVIEW_SUCCESS,
-      payload: data.review._id,
-    });
-
-    toast.success(data.message, {
-      autoClose: 500,
-      theme: "colored",
-    });
-  } catch (error) {
-    dispatch({
-      type: DELETE_REVIEW_FAIL,
-      payload: error.response.data.errMessage || "Failed to delete the review!",
-    });
+    return fail(dispatch, EDIT_REVIEW_FAIL, error);
   }
 };
 
-// Action to clear errors
-export const clearErrors = () => (dispatch) => {
-  dispatch({ type: CLEAR_ERRORS });
+export const deleteReviews = (reviewId) => async (dispatch) => {
+  dispatch({ type: DELETE_REVIEW_REQUEST });
+  try {
+    await api.delete(`/api/v1/review/delete/${reviewId}`);
+    dispatch({ type: DELETE_REVIEW_SUCCESS, payload: reviewId });
+    toast.info("Ревюто е изтрито.");
+    return true;
+  } catch (error) {
+    return fail(dispatch, DELETE_REVIEW_FAIL, error);
+  }
 };
+
+export const clearErrors = () => (dispatch) => dispatch({ type: CLEAR_ERRORS });

@@ -22,51 +22,62 @@ import {
   CLEAR_ERRORS,
 } from "../Constants/authConstants";
 
+/*
+ * initialized — true след първата проверка на сесията.
+ * Охраната на маршрутите изчаква това, вместо да пренасочва преждевременно.
+ * submitting — заявка за вход/регистрация в ход (не скрива текущия потребител).
+ */
 const initialState = {
+  initialized: false,
   loading: true,
-  user: {},
+  submitting: false,
+  isAuthenticated: false,
+  user: null,
+  error: null,
+  message: null,
 };
 
 export const authReducer = (state = initialState, action) => {
   switch (action.type) {
+    case LOAD_USER_REQUEST:
+      return { ...state, loading: !state.initialized };
     case LOGIN_REQUEST:
     case REGISTER_REQUEST:
-    case LOAD_USER_REQUEST:
     case LOGOUT_REQUEST:
-      return { loading: true, isAuthenticated: false };
-    case REGISTER_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        isAuthenticated: false,
-        user: null,
-        message: action.payload,
-      };
+      return { ...state, submitting: true, error: null };
+
     case LOGIN_SUCCESS:
     case LOAD_USER_SUCCESS:
       return {
         ...state,
+        initialized: true,
         loading: false,
-        isAuthenticated: true,
+        submitting: false,
+        isAuthenticated: Boolean(action.payload),
         user: action.payload,
+        error: null,
       };
-    case LOGOUT_SUCCESS:
+
+    case LOAD_USER_FAIL:
       return {
         ...state,
+        initialized: true,
         loading: false,
         isAuthenticated: false,
         user: null,
       };
+
+    case REGISTER_SUCCESS:
+      return { ...state, submitting: false, message: action.payload };
+
+    case LOGOUT_SUCCESS:
+      return { ...state, submitting: false, isAuthenticated: false, user: null };
+
     case LOGIN_FAIL:
     case REGISTER_FAIL:
-    case LOAD_USER_FAIL:
     case LOGOUT_FAIL:
-      return {
-        loading: false,
-        isAuthenticated: false,
-        user: null,
-        error: action.payload,
-      };
+      return { ...state, submitting: false, error: action.payload };
+
     case CLEAR_ERRORS:
       return { ...state, message: null, error: null };
     default:
@@ -74,39 +85,22 @@ export const authReducer = (state = initialState, action) => {
   }
 };
 
-export const userReducer = (state = {}, action) => {
+export const userReducer = (state = { loading: false }, action) => {
   switch (action.type) {
     case PROFILE_UPDATE_REQUEST:
     case PASSWORD_UPDATE_REQUEST:
-      return {
-        ...state,
-        loading: true,
-      };
+      return { ...state, loading: true };
     case PROFILE_UPDATE_SUCCESS:
     case PASSWORD_UPDATE_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        isUpdated: action.payload,
-      };
+      return { ...state, loading: false, isUpdated: action.payload };
     case PROFILE_UPDATE_RESET:
     case PASSWORD_UPDATE_RESET:
-      return {
-        ...state,
-        isUpdated: false,
-      };
+      return { ...state, isUpdated: false };
     case PROFILE_UPDATE_FAIL:
     case PASSWORD_UPDATE_FAIL:
-      return {
-        ...state,
-        loading: false,
-        error: action.payload,
-      };
+      return { ...state, loading: false, error: action.payload };
     case CLEAR_ERRORS:
-      return {
-        ...state,
-        error: null,
-      };
+      return { ...state, error: null };
     default:
       return state;
   }

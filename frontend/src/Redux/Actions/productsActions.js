@@ -1,4 +1,4 @@
-import axios from "axios";
+import api, { getApiErrorMessage } from "../../api/axios";
 import {
   GET_PRODUCTS_REQUEST,
   GET_PRODUCTS_SUCCESS,
@@ -10,42 +10,38 @@ import {
 } from "../Constants/productsConstants";
 
 export const getProducts = (cat) => async (dispatch) => {
+  dispatch({ type: GET_PRODUCTS_REQUEST });
   try {
-    dispatch({ type: GET_PRODUCTS_REQUEST });
-  
-    const { data } = await axios.get(`/api/v1/products/${cat}`);
-
-    dispatch({
-      type: GET_PRODUCTS_SUCCESS,
-      payload: data.products,
-    });
+    const { data } = await api.get(`/api/v1/products/${encodeURIComponent(cat)}`);
+    dispatch({ type: GET_PRODUCTS_SUCCESS, payload: data.products || [] });
   } catch (error) {
+    // „Products not found“ от бекенда = празна категория.
+    if (error.status === 404 && /products not found/i.test(error.response?.data?.errMessage || "")) {
+      dispatch({ type: GET_PRODUCTS_SUCCESS, payload: [] });
+      return;
+    }
     dispatch({
       type: GET_PRODUCTS_FAIL,
-      payload: error.response.data.errMessage,
+      payload: { message: getApiErrorMessage(error), status: error.status },
     });
   }
 };
 
 export const getProductDetails = (cat, id) => async (dispatch) => {
+  dispatch({ type: GET_PRODUCT_DETAILS_REQUEST });
   try {
-    dispatch({ type: GET_PRODUCT_DETAILS_REQUEST });
-
-    const { data } = await axios.get(`/api/v1/products/${cat}/${id}`);
-
-    dispatch({
-      type: GET_PRODUCT_DETAILS_SUCCESS,
-      payload: data.product,
-    });
+    const { data } = await api.get(
+      `/api/v1/products/${encodeURIComponent(cat)}/${id}`
+    );
+    dispatch({ type: GET_PRODUCT_DETAILS_SUCCESS, payload: data.product });
   } catch (error) {
     dispatch({
       type: GET_PRODUCT_DETAILS_FAIL,
-      payload: error.response.data.errMessage,
+      payload: { message: getApiErrorMessage(error), status: error.status },
     });
   }
 };
 
-// Clear Errors
 export const clearErrors = () => (dispatch) => {
   dispatch({ type: CLEAR_ERRORS });
 };

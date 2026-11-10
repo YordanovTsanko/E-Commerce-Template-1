@@ -8,21 +8,20 @@ const {
   deleteFromCart,
   getItemsFromCart,
   clearCartAffterOrder,
-  getAllOrders
+  getAllOrders,
 } = require("../controllers/ordersController");
+const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
 
-router.route("/order/new").post(newOrder);
-router.route("/orders").get(getUserOrders);
-router.route("/order/:id").get(getOrderById);
-router.route("/order/clear/cart").put(clearCartAffterOrder);
+router.route("/order/new").post(isAuthenticated, newOrder);
+router.route("/orders").get(isAuthenticated, getUserOrders);
+router.route("/order/clear/cart").put(isAuthenticated, clearCartAffterOrder);
+router.route("/order/:id").get(isAuthenticated, getOrderById);
 
-router.route("/cart/add/:id").put(addToCart);
-router.route("/cart/delete/:id").delete(deleteFromCart);
-router.route("/cart").get(getItemsFromCart);
+router.route("/cart/add/:id").put(isAuthenticated, addToCart);
+router.route("/cart/delete/:id").delete(isAuthenticated, deleteFromCart);
+router.route("/cart").get(isAuthenticated, getItemsFromCart);
 
 // admin
-
-router.route("/admin/orders").get(getAllOrders);
-
+router.route("/admin/orders").get(isAuthenticated, isAdmin, getAllOrders);
 
 module.exports = router;

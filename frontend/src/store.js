@@ -1,6 +1,10 @@
-import { createStore, applyMiddleware, compose, combineReducers } from "redux";
-import thunk from "redux-thunk";
-import createSagaMiddleware from "redux-saga";
+import {
+  legacy_createStore as createStore,
+  applyMiddleware,
+  compose,
+  combineReducers,
+} from "redux";
+import { thunk } from "redux-thunk";
 
 import { authReducer, userReducer } from "./Redux/Reducers/authReducer";
 import { productDetailsReducer, productsReducers } from "./Redux/Reducers/productsReducer";
@@ -18,18 +22,10 @@ const reducer = combineReducers({
   reviews: reviewsReducer,
 });
 
-const initialState = {};
+const composeEnhancers =
+  (typeof window !== "undefined" && window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__) ||
+  compose;
 
-const middleware = [thunk, createSagaMiddleware()];
-
-const composeEnhancers = window.__REDUX_DEVTOOLS_EXTENSION_COMPOSE__ || compose;
-
-const store = createStore(
-  reducer,
-  initialState,
-  composeEnhancers(applyMiddleware(...middleware))
-);
+const store = createStore(reducer, composeEnhancers(applyMiddleware(thunk)));
 
 export default store;
-
-

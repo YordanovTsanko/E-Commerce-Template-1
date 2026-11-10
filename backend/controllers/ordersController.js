@@ -10,7 +10,7 @@ const { default: mongoose } = require("mongoose");
 exports.addToCart = catchAsyncErrors(async (req, res, next) => {
   try {
     if (!req.user) {
-      return next(new ErrorHandler("Please log in first!!!", 404));
+      return next(new ErrorHandler("Please log in first", 401));
     }
 
     const user = await User.findById(req.user.id);
@@ -50,13 +50,13 @@ exports.addToCart = catchAsyncErrors(async (req, res, next) => {
       cart: user.cartItems,
     });
   } catch (error) {
-    return next(new ErrorHandler(error.response.data.errMessage, 404));
+    return next(new ErrorHandler(error.message, 500));
   }
 });
 // Delete from Cart => /api/v1/cart/delete/:id
 exports.deleteFromCart = catchAsyncErrors(async (req, res, next) => {
   if (!req.user) {
-    return next(new ErrorHandler("Please log in first!!!", 404));
+    return next(new ErrorHandler("Please log in first", 401));
   }
 
   const user = await User.findById(req.user.id);
@@ -81,7 +81,7 @@ exports.deleteFromCart = catchAsyncErrors(async (req, res, next) => {
 // Get Cart items => /api/v1/cart
 exports.getItemsFromCart = catchAsyncErrors(async (req, res, next) => {
   if (!req.user) {
-    return next(new ErrorHandler("Please log in first!!!", 404));
+    return next(new ErrorHandler("Please log in first", 401));
   }
   const user = await User.findById(req.user.id);
 
@@ -97,6 +97,9 @@ exports.getItemsFromCart = catchAsyncErrors(async (req, res, next) => {
 //create new order /api/v1/order/new
 exports.newOrder = catchAsyncErrors(async (req, res, next) => {
 
+  if (!req.user) {
+    return next(new ErrorHandler("Please log in first", 401));
+  }
   try {
     const order = await Orders.create({
       ...req.body,
@@ -109,7 +112,6 @@ exports.newOrder = catchAsyncErrors(async (req, res, next) => {
       order,
     });
   } catch (error) {
-    console.log(error);
     return next(new ErrorHandler("Error creating the new order", 404));
   }
 });
@@ -118,20 +120,16 @@ exports.getUserOrders = catchAsyncErrors(async (req, res, next) => {
   try {
     
   if (!req.user) {
-    return next(new ErrorHandler("Please log in first", 404));
+    return next(new ErrorHandler("Please log in first", 401));
   }
   const orders = await Orders.find({ user: req.user._id });
-
-  if (orders.length <= 0) {
-    return next(new ErrorHandler("You don't have any orders", 404));
-  }
 
   res.status(200).json({
     success: true,
     orders,
   });
   } catch (error) {
-    console.log(error)
+    return next(error);
   }
 });
 // Get single order => /api/v1/order/:id
@@ -142,16 +140,14 @@ exports.getOrderById = catchAsyncErrors(async (req, res, next) => {
     return next(new ErrorHandler("Invalid order ID", 400));
   }
 
-  const order = await Orders.findById(orderId).populate("user", "name email");
+  const order = await Orders.findById(orderId).populate("user", "firstName lastName email");
 
   if (!order) {
     return next(new ErrorHandler("No order found with this ID", 404));
   }
 
-  if (
-    !req.user ||
-    (order.user && order.user._id.toString() !== req.user._id.toString())
-  ) {
+  const isOwner = order.user && req.user && order.user._id.toString() === req.user._id.toString();
+  if (!req.user || (!isOwner && req.user.role !== "admin")) {
     return next(
       new ErrorHandler("You are not authorized to view this order", 403)
     );
@@ -164,6 +160,9 @@ exports.getOrderById = catchAsyncErrors(async (req, res, next) => {
 });
 // Clear cart after placing an order => /api/v1/order/clear/cart
 exports.clearCartAffterOrder = catchAsyncErrors(async (req, res, next) => {
+  if (!req.user) {
+    return next(new ErrorHandler("Please log in first", 401));
+  }
   const user = await User.findById(req.user.id);
   user.cartItems = [];
 

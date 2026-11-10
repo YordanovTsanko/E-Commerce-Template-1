@@ -31,7 +31,7 @@ exports.getAllProdcutsByCat = catchAsyncErrors(async (req, res, next) => {
       products: productsData,
     });
   } catch (error) {
-    console.error(error);
+    return next(error);
   }
 });
 
@@ -61,7 +61,9 @@ exports.getSingleProductByID = catchAsyncErrors(async (req, res, next) => {
 exports.searchProduct = catchAsyncErrors(async (req, res, next) => {
   const searchString = req.params.field;
 
-  const regex = new RegExp(searchString, "i");
+  // Ескейпваме специалните символи — иначе напр. "(" чупи RegExp и сървъра.
+  const safe = String(searchString).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(safe, "i");
 
   const products = await Products.find({
     $or: [
@@ -78,7 +80,6 @@ exports.searchProduct = catchAsyncErrors(async (req, res, next) => {
 });
 //Admin add product => /api/v1/admin/product/new
 exports.addNewProduct = catchAsyncErrors(async (req, res, next) => {
-  console.log(req.body);
   //body must include name, img, price, category,description, @stock
   const product = new Products(req.body);
 
@@ -87,7 +88,7 @@ exports.addNewProduct = catchAsyncErrors(async (req, res, next) => {
   res.status(200).json({
     success: true,
     product: product,
-    message: "Order added successfully",
+    message: "Product added successfully",
   });
 });
 //Admin get all product => /api/v1/admin/products
@@ -124,7 +125,7 @@ exports.getAdminSingleProductDetails = catchAsyncErrors(
 exports.deleteProduct = catchAsyncErrors(async (req, res, next) => {
   const productId = req.params.id;
 
-  const product = await Products.deleteOne({ _id: productId });
+  const product = await Products.findByIdAndDelete(productId);
 
   if (!product) {
     return next(new ErrorHandler("Product not found", 404));

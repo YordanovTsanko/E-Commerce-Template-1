@@ -1,8 +1,8 @@
 {
-  "name": "ShopIt",
-  "short_name": "ShopIt",
-  "theme_color": "#ffffff",
-  "background_color": "#ffffff",
+  "name": "Магазин — онлайн магазин",
+  "short_name": "Магазин",
+  "theme_color": "#0F4C5C",
+  "background_color": "#F4F6F7",
   "display": "standalone",
   "scope": "/",
   "start_url": "/",

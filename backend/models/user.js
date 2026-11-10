@@ -15,6 +15,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please enter an email"],
     unique: true,
+    trim: true,
+    lowercase: true,
   },
   phoneNumber: {
     type: Number,
@@ -41,6 +43,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: [true, "Please enter a password"],
     minLength: [6, "Password must be at least 6 characters"],
+    select: false, // хешът никога не се връща към фронтенда, освен ако не е поискан с .select("+password")
   },
   role: {
     type: String,

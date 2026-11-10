@@ -1,83 +1,121 @@
-import "./App.css";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import HomePage from "./Pages/Home/HomePage";
-import ContactUs from "./Pages/ContactUs/ContactUs";
-import Login from "./Components/Auth/Login";
-import Register from "./Components/Auth/Register";
-import Cart from "./Pages/Cart/Cart";
-import ProductDetail from "./Components/Products/ProductDetail";
-import SingleCategory from "./Components/Products/SingleCategory";
-import Navigation from "./Components/Layouts/Navigation";
-import ProtectedRoute from "./Components/Layouts/ProtectedRoute";
-import Payment from "./Components/Cart/Payment";
-import { Flip, ToastContainer } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import CheckoutForm from "./Components/Cart/CheckoutForm";
-import UpdateDetails from "./Components/Auth/UpdateDetails";
-import ForgotPasswordForm from "./Components/Auth/ForgotPasswordForm";
-import AdminProductPage from "./Components/Admin/Pages/AdminProductPage";
-import AdminHomePage from "./Components/Admin/Pages/AdminHomePage";
-import CopyRight from "./Components/Layouts/CopyRight";
-import Profile from "./Components/Auth/Profile";
-import ProfileOrders from "./Components/Auth/ProfileOrders";
-import SingleOrder from "./Components/Auth/SingleOrder";
-import ThanksForOrder from "./Components/Cart/ThanksForOrder";
-import AdminUsersPage from "./Components/Admin/Pages/AdminUsersPage";
-import SingleProduct from "./Components/Admin/Components/Products/SingleProduct";
-import AdminOrdersPage from "./Components/Admin/Pages/AdminOrdersPage";
-import AdminProtectedRoute from "./Components/Admin/Components/AdminProtectedRoute";
+import React, { useEffect } from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { Slide, ToastContainer, toast } from "react-toastify";
 
-function App() {
-  return (
-    <>
+import { loadUser } from "./Redux/Actions/authActions";
+import { getCart, resetCart } from "./Redux/Actions/cartActions";
+import ErrorBoundary from "./components/common/ErrorBoundary";
+import ScrollToTop from "./components/common/ScrollToTop";
+import { ProtectedRoute, AdminRoute } from "./components/common/RouteGuards";
+import SiteLayout from "./layouts/SiteLayout";
+import AdminLayout from "./layouts/AdminLayout";
+
+import HomePage from "./pages/shop/HomePage";
+import CategoryPage from "./pages/shop/CategoryPage";
+import ProductPage from "./pages/shop/ProductPage";
+import CartPage from "./pages/shop/CartPage";
+import CheckoutPage from "./pages/shop/CheckoutPage";
+import PaymentPage from "./pages/shop/PaymentPage";
+import OrderPlacedPage from "./pages/shop/OrderPlacedPage";
+import ContactPage from "./pages/ContactPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import LoginPage from "./pages/auth/LoginPage";
+import RegisterPage from "./pages/auth/RegisterPage";
+import ForgotPasswordPage from "./pages/auth/ForgotPasswordPage";
+import ProfilePage from "./pages/account/ProfilePage";
+import EditProfilePage from "./pages/account/EditProfilePage";
+import OrdersPage from "./pages/account/OrdersPage";
+import OrderDetailsPage from "./pages/account/OrderDetailsPage";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminProductDetails from "./pages/admin/AdminProductDetails";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminUsers from "./pages/admin/AdminUsers";
+
+/** Зарежда сесията веднъж при старт и количката, щом потребителят е влязъл. */
+const SessionSync = () => {
+  const dispatch = useDispatch();
+  const { isAuthenticated, initialized } = useSelector((s) => s.auth);
+
+  useEffect(() => {
+    dispatch(loadUser());
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (!initialized) return;
+    dispatch(isAuthenticated ? getCart() : resetCart());
+  }, [dispatch, initialized, isAuthenticated]);
+
+  useEffect(() => {
+    const offline = () => toast.warn("Няма интернет връзка. Част от функциите няма да работят.");
+    const online = () => toast.success("Връзката е възстановена.");
+    window.addEventListener("offline", offline);
+    window.addEventListener("online", online);
+    return () => {
+      window.removeEventListener("offline", offline);
+      window.removeEventListener("online", online);
+    };
+  }, []);
+
+  return null;
+};
+
+const App = () => (
+  <BrowserRouter>
+    <ErrorBoundary>
+      <SessionSync />
+      <ScrollToTop />
       <ToastContainer
-        toastClassName="toastContainerBox"
-        transition={Flip}
-        position="top-center"
+        position="top-right"
+        autoClose={3200}
+        transition={Slide}
+        newestOnTop
+        closeOnClick
+        pauseOnFocusLoss={false}
+        theme="light"
+        limit={4}
       />
-      <Router>
-        <Navigation />
-        <div className="margin">
-          <Routes>
-            {/*User Routes  */}
-            <Route path="/" index element={<HomePage />} />
-            <Route path="/contact" element={<ContactUs />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
-            <Route path="/forgotpassword" element={<ForgotPasswordForm />} />
-            <Route element={<ProtectedRoute element={<Profile />} />}>
-              <Route path="/profile" element={<Profile />} />
-            </Route>
-            <Route element={<ProtectedRoute element={<UpdateDetails />} />}>
-              <Route path="/profile/edit" element={<UpdateDetails />} />
-            </Route>
-            <Route element={<ProtectedRoute element={<ProfileOrders />} />}>
-              <Route path="/profile/orders" element={<ProfileOrders />} />
-            </Route>
-            <Route element={<ProtectedRoute element={<SingleOrder />} />}>
-              <Route path="/profile/order/:id" element={<SingleOrder />} />
-            </Route>
-            <Route path="/product/type/:cat" element={<SingleCategory />} />
-            <Route path="/product/type/:cat/:id" element={<ProductDetail />} />
+      <Routes>
+        {/* Публичен сайт — с навигация и футър */}
+        <Route element={<SiteLayout />}>
+          <Route index element={<HomePage />} />
+          <Route path="contact" element={<ContactPage />} />
+          <Route path="login" element={<LoginPage />} />
+          <Route path="register" element={<RegisterPage />} />
+          <Route path="forgotpassword" element={<ForgotPasswordPage />} />
+          <Route path="product/type/:cat" element={<CategoryPage />} />
+          <Route path="product/type/:cat/:id" element={<ProductPage />} />
+          <Route path="cart" element={<CartPage />} />
 
-            <Route path="/cart" element={<Cart />} />
-            <Route path="/checkout" element={<CheckoutForm />} />
-            <Route path="/payment" element={<Payment />} />
-            <Route path="/order/placed" element={<ThanksForOrder />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="profile" element={<ProfilePage />} />
+            <Route path="profile/edit" element={<EditProfilePage />} />
+            <Route path="profile/orders" element={<OrdersPage />} />
+            <Route path="profile/order/:id" element={<OrderDetailsPage />} />
+            <Route path="checkout" element={<CheckoutPage />} />
+            <Route path="payment" element={<PaymentPage />} />
+            <Route path="order/placed" element={<OrderPlacedPage />} />
+          </Route>
 
-            {/* Admin Routes */}
-            <Route element={<AdminProtectedRoute />}>
-              <Route path="/admin/dashboard" element={<AdminHomePage />} />
-              <Route path="/admin/products" element={<AdminProductPage />} />
-              <Route path="/admin/product/:id" element={<SingleProduct />} />
-              <Route path="/admin/users" element={<AdminUsersPage />} />
-              <Route path="/admin/orders" element={<AdminOrdersPage />} />
-            </Route>
-          </Routes>
-        </div>
-        <CopyRight />
-      </Router>
-    </>
-  );
-}
+          <Route path="*" element={<NotFoundPage />} />
+        </Route>
+
+        {/* Админ панел — без навигацията и футъра на сайта */}
+        <Route path="admin" element={<AdminRoute />}>
+          <Route element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProducts />} />
+            <Route path="product/:id" element={<AdminProductDetails />} />
+            <Route path="orders" element={<AdminOrders />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="*" element={<NotFoundPage admin />} />
+          </Route>
+        </Route>
+      </Routes>
+    </ErrorBoundary>
+  </BrowserRouter>
+);
+
 export default App;

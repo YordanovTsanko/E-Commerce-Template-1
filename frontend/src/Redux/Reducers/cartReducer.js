@@ -13,44 +13,31 @@ import {
 const initialState = {
   cartItems: [],
   loading: false,
+  pendingId: null, // продуктът, върху който тече заявка (за спинър на бутона)
   error: null,
 };
 
 export const cartReducer = (state = initialState, action) => {
   switch (action.type) {
-    case ADD_TO_CART_REQUEST:
     case GET_CART_REQUEST:
+      return { ...state, loading: state.cartItems.length === 0 };
+    case ADD_TO_CART_REQUEST:
     case REMOVE_FROM_CART_REQUEST:
-      return {
-        ...state,
-        loading: true,
-      };
+      return { ...state, pendingId: action.payload, error: null };
     case ADD_TO_CART_SUCCESS:
-      return {
-        ...state,
-        loading: false,
-        cartItems: action.payload,
-      };
-
     case GET_CART_SUCCESS:
       return {
         ...state,
         loading: false,
-        cartItems: action.payload,
+        pendingId: null,
+        cartItems: Array.isArray(action.payload) ? action.payload : [],
       };
-      case REMOVE_FROM_CART_SUCCESS:
-        return{
-          ...state,
-          loading: false
-        }
+    case REMOVE_FROM_CART_SUCCESS:
+      return { ...state, pendingId: null };
     case ADD_TO_CART_FAIL:
     case GET_CART_FAIL:
     case REMOVE_FROM_CART_FAIL:
-      return {
-        ...state,
-        loading: false,
-        error: action.payload,
-      };
+      return { ...state, loading: false, pendingId: null, error: action.payload };
     default:
       return state;
   }

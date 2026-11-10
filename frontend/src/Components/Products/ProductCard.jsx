@@ -1,138 +1,66 @@
-import {
-  Card,
-  Button,
-  CardActionArea,
-  CardActions,
-  Rating,
-  CardContent,
-  Typography,
-  Dialog,
-  DialogContent,
-  DialogContentText,
-  DialogActions,
-} from "@mui/material";
-import { Box } from "@mui/system";
-import styles from "./ProductCard.module.css";
-import { useDispatch, useSelector } from "react-redux";
-import { addToCart } from "../../Redux/Actions/cartActions";
-import { Transition } from "../Layouts/Handlers";
-import { AiFillCloseCircle, AiOutlineLogin } from "react-icons/ai";
+import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { CircularProgress, IconButton, Rating, Tooltip } from "@mui/material";
+import { FiPlus } from "react-icons/fi";
+import { addToCart } from "../../Redux/Actions/cartActions";
+import { formatPrice } from "../../utils/format";
+import ProductImage from "./ProductImage";
+import LoginPrompt from "./LoginPrompt";
 
 const ProductCard = ({ prod }) => {
-  const [openAlert, setOpenAlert] = useState(false);
-
-  const { isAuthenticated } = useSelector((state) => state.auth);
-
   const dispatch = useDispatch();
+  const isAuthenticated = useSelector((s) => s.auth.isAuthenticated);
+  const pendingId = useSelector((s) => s.cart.pendingId);
+  const [prompt, setPrompt] = useState(false);
+  const busy = pendingId === prod._id;
+  const outOfStock = Number(prod.stock) <= 0;
+  const href = `/product/type/${prod.category}/${prod._id}`;
 
-  const handleAddToCart = async (e, id) => {
-    e.preventDefault();
-    if (!isAuthenticated) {
-      setOpenAlert(true);
-    } else {
-      setOpenAlert(false);
-      dispatch(addToCart(id));
-    }
+  const handleAdd = () => {
+    if (!isAuthenticated) return setPrompt(true);
+    dispatch(addToCart(prod._id));
   };
 
   return (
-    <>
-      <Dialog
-        open={openAlert}
-        TransitionComponent={Transition}
-        keepMounted
-        onClose={() => setOpenAlert(false)}
-        aria-describedby="alert-dialog-slide-description"
-      >
-        <DialogContent sx={{ width: { xs: 280, md: 350, xl: 400 } }}>
-          <DialogContentText
-            style={{ textAlign: "center" }}
-            id="alert-dialog-slide-description"
-          >
-            Please Login To Proceed
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions sx={{ display: "flex", justifyContent: "space-evenly" }}>
-          <Link to="/login">
-            {" "}
-            <Button
-              variant="contained"
-              endIcon={<AiOutlineLogin />}
-              color="primary"
-            >
-              Login
-            </Button>
-          </Link>
-          <Button
-            variant="contained"
-            color="error"
-            onClick={() => setOpenAlert(false)}
-            endIcon={<AiFillCloseCircle />}
-          >
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Card className={styles.main_card}>
-        <CardActionArea className={styles.card_action}>
-          <Box className={styles.cart_box}>
-            <img
-              alt={prod.name}
-              src={prod.img}
-              loading="lazy"
-              className={styles.cart_img}
-            />
-          </Box>
-
-          <Typography
-            gutterBottom
-            variant="h6"
-            sx={{
-              mt: 1,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            }}
-          >
-            {prod.name.length > 15 ? prod.name.slice(0, 15) + "..." : prod.name}
-          </Typography>
-
-          <CardActions
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              width: "100%",
-            }}
-          >
-            <Typography variant="p" color="primary">
-              £{prod.price}
-            </Typography>
-            <Typography variant="p">
-              <Rating
-                precision={0.5}
-                name="read-only"
-                value={prod.rating}
-                readOnly
-                style={{ fontSize: "1.2rem" }}
-              />
-            </Typography>
-          </CardActions>
-        </CardActionArea>
-
-        <CardContent>
-          <Button
-            variant="contained"
-            color="primary"
-            onClick={(e) => handleAddToCart(e, prod._id)}
-          >
-            Add to Cart
-          </Button>
-        </CardContent>
-      </Card>
-    </>
+    <article className="product-card">
+      <Link to={href} className="product-card__media" aria-label={prod.name}>
+        <ProductImage src={prod.img} alt={prod.name} />
+      </Link>
+      <div className="product-card__body">
+        <Link to={href}>
+          <h3 className="product-card__name" title={prod.name}>{prod.name}</h3>
+        </Link>
+        <Rating value={Number(prod.rating) || 0} precision={0.5} readOnly size="small" aria-label={`Оценка ${Number(prod.rating || 0).toFixed(1)} от 5`} />
+        {outOfStock ? (
+          <span className="stock-out">Изчерпан</span>
+        ) : Number(prod.stock) <= 5 ? (
+          <span className="stock-low">Остават {prod.stock} бр.</span>
+        ) : null}
+        <div className="product-card__row">
+          <span className="price">{formatPrice(prod.price)}</span>
+          <Tooltip title={outOfStock ? "Изчерпан" : "Добави в количката"}>
+            <span>
+              <IconButton
+                onClick={handleAdd}
+                disabled={busy || outOfStock}
+                aria-label={`Добави ${prod.name} в количката`}
+                sx={{
+                  bgcolor: "primary.main",
+                  color: "#fff",
+                  borderRadius: "10px",
+                  "&:hover": { bgcolor: "primary.dark" },
+                  "&.Mui-disabled": { bgcolor: "var(--line)" },
+                }}
+              >
+                {busy ? <CircularProgress size={18} color="inherit" /> : <FiPlus />}
+              </IconButton>
+            </span>
+          </Tooltip>
+        </div>
+      </div>
+      <LoginPrompt open={prompt} onClose={() => setPrompt(false)} />
+    </article>
   );
 };
 

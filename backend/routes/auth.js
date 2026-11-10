@@ -6,15 +6,17 @@ const {
   logoutUser,
   isLoggedIn,
   editUser,
-  getAdminAllUsers
+  getAdminAllUsers,
 } = require("../controllers/authController");
+const { isAuthenticated, isAdmin } = require("../middlewares/authMiddleware");
 
 router.route("/register").post(registerUser);
 router.route("/login").post(loginUser);
 router.route("/logout").post(logoutUser);
 router.route("/isloggedin").get(isLoggedIn);
-router.route("/user/edit/:id").put(editUser);
+router.route("/user/edit/:id").put(isAuthenticated, editUser);
+
 // админ
-router.route("/admin/users").get(getAdminAllUsers);
+router.route("/admin/users").get(isAuthenticated, isAdmin, getAdminAllUsers);
 
 module.exports = router;

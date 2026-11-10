@@ -1,17 +1,13 @@
-const User = require("../models/user");
 const ErrorHandler = require("../utils/errorHandler");
-const catchAsyncErrors = require("./catchAsyncErrors");
-const jwt = require("jsonwebtoken");
 
-exports.isAuthenticated = catchAsyncErrors(async (req, res, next) => {
-//   const { token } = req.cookies;
+// Пуска само влезли потребители (сесия от passport).
+exports.isAuthenticated = (req, res, next) => {
+  if (req.isAuthenticated && req.isAuthenticated()) return next();
+  return next(new ErrorHandler("Please log in first", 401));
+};
 
-  if (false) {
-    return next(new ErrorHandler("Моля влезте в профила си за да продължите", 401));
-  }
-  console.log(req.cookies)
-//   const decoded = jwt.verify(token, process.env.JWT_SECRET);
-//   req.user = await User.findById(decoded.id);
-
-  next();
-});
+// Пуска само администратори. Използвайте СЛЕД isAuthenticated.
+exports.isAdmin = (req, res, next) => {
+  if (req.user && req.user.role === "admin") return next();
+  return next(new ErrorHandler("You are not authorized for this.", 403));
+};
